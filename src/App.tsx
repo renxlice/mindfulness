@@ -41,25 +41,25 @@ const AUDIO_OPTIONS = [
     id: 'droplet',
     label: 'Tetes Air',
     icon: '💧',
-    url: 'public/audio/dripping-water-in-cave-114694.mp3',
+    url: '/audio/dripping-water-in-cave-114694.mp3',
   },
   {
     id: 'bell',
     label: 'Lonceng',
     icon: '🔔',
-    url: 'public/audio/bellding-254774.mp3',
+    url: '/audio/bellding-254774.mp3',
   },
   {
     id: 'wind',
     label: 'Hembusan Angin',
     icon: '〰️',
-    url: 'public/audio/smooth-cold-wind-looped-135538.mp3',
+    url: '/audio/smooth-cold-wind-looped-135538.mp3',
   },
   {
     id: 'leaves',
     label: 'Bisik Daun',
     icon: '🍃',
-    url: 'public/audio/leaves-rustling-236742.mp3',
+    url: '/audio/leaves-rustling-236742.mp3',
   },
 ] as const
 
@@ -315,6 +315,15 @@ function App() {
       }
     }
   }, [soundOn, stepIndex])
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: 'smooth'
+    })
+  }, [stepIndex])
 
   const paintCanvasBase = useCallback(() => {
     const canvas = calmCanvasRef.current
@@ -628,7 +637,7 @@ function App() {
 
     // Play pop sound
     try {
-      const popSound = new Audio('public/audio/bubble-pop-06-351337.mp3')
+      const popSound = new Audio('/audio/bubble-pop-06-351337.mp3')
       popSound.volume = 0.3
       popSound.play().catch(() => {})
     } catch (err) {

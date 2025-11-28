@@ -232,6 +232,8 @@ function App() {
   const [poppedBubbles, setPoppedBubbles] = useState<Set<number>>(new Set())
   const [bubbles, setBubbles] = useState<Array<{ id: number; x: number; y: number; size: number; speedX: number; speedY: number }>>([])
   const bubbleContainerRef = useRef<HTMLDivElement | null>(null)
+  const [showScrollIndicator, setShowScrollIndicator] = useState(true)
+  const [hasScrolled, setHasScrolled] = useState(false)
 
   useEffect(() => {
     const phases = [
@@ -323,6 +325,70 @@ function App() {
       left: 0,
       behavior: 'smooth'
     })
+  }, [stepIndex])
+
+  // Handle scroll indicator
+  useEffect(() => {
+    if (!showScrollIndicator || hasScrolled) return
+
+    const handleScroll = () => {
+      if (window.scrollY > 100) {
+        setHasScrolled(true)
+        setShowScrollIndicator(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    
+    // Hide indicator after 5 seconds
+    const timeout = setTimeout(() => {
+      setShowScrollIndicator(false)
+    }, 5000)
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      clearTimeout(timeout)
+    }
+  }, [showScrollIndicator, hasScrolled])
+
+  // Show scroll indicator when step changes and user is at top
+  useEffect(() => {
+    // Reset scroll state when step changes
+    setHasScrolled(false)
+    
+    // Check if user is at top of page
+    const checkScrollPosition = () => {
+      if (window.scrollY < 50) {
+        setShowScrollIndicator(true)
+      } else {
+        setShowScrollIndicator(false)
+      }
+    }
+    
+    // Wait for auto-scroll to complete, then check position
+    const timeouts: ReturnType<typeof setTimeout>[] = []
+    
+    // Check after multiple delays to catch scroll completion
+    timeouts.push(setTimeout(checkScrollPosition, 100))
+    timeouts.push(setTimeout(checkScrollPosition, 500))
+    timeouts.push(setTimeout(checkScrollPosition, 1000))
+    
+    // Also listen for scroll end
+    let scrollTimeout: ReturnType<typeof setTimeout>
+    const handleScroll = () => {
+      clearTimeout(scrollTimeout)
+      scrollTimeout = setTimeout(() => {
+        checkScrollPosition()
+      }, 150)
+    }
+    
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    
+    return () => {
+      timeouts.forEach(clearTimeout)
+      window.removeEventListener('scroll', handleScroll)
+      clearTimeout(scrollTimeout)
+    }
   }, [stepIndex])
 
   const paintCanvasBase = useCallback(() => {
@@ -517,6 +583,20 @@ function App() {
     
     // Select the piece
     setSelectedPiece(pieceId)
+    
+    // Scroll to correct target if on mobile (only for touch devices)
+    if (isTouchDevice) {
+      const piece = PUZZLE_PIECES.find((item) => item.id === pieceId)
+      if (piece) {
+        // Small delay to ensure highlight appears first, then scroll
+        setTimeout(() => {
+          const targetElement = document.querySelector(`[data-target-id="${piece.targetId}"]`)
+          if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 100)
+      }
+    }
   }
 
   const handleTargetTap = (targetId: string, event?: React.TouchEvent | React.MouseEvent) => {
@@ -804,6 +884,23 @@ function App() {
             {stepIndex + 1} dari {steps.length} tahap
           </p>
         </div>
+        {showScrollIndicator && (
+          <div className="scroll-indicator-wrapper">
+            <div className="scroll-indicator">
+              <div className="scroll-indicator-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5V19M12 19L19 12M12 19L5 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="scroll-indicator-content">
+                <p className="scroll-indicator-title">
+                  {stepIndex === 0 ? 'Mulai Perjalanan' : currentStep.label}
+                </p>
+                <p className="scroll-indicator-text">Scroll ke bawah untuk melanjutkan</p>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="step-area">
@@ -920,10 +1017,13 @@ function App() {
                     {PUZZLE_TARGETS.map((target) => {
                       const pieceId = puzzlePlacement[target.id]
                       const piece = PUZZLE_PIECES.find((item) => item.id === pieceId)
+                      const selectedPieceData = selectedPiece ? PUZZLE_PIECES.find((item) => item.id === selectedPiece) : null
+                      const isCorrectTarget = selectedPiece && selectedPieceData && selectedPieceData.targetId === target.id && !piece
                       return (
                         <div
                           key={target.id}
-                          className={`puzzle-target ${piece ? 'filled' : ''} ${selectedPiece && !piece ? 'ready-for-drop' : ''}`}
+                          data-target-id={target.id}
+                          className={`puzzle-target ${piece ? 'filled' : ''} ${selectedPiece && !piece ? 'ready-for-drop' : ''} ${isCorrectTarget ? 'correct-target' : ''}`}
                           onDragOver={(event) => event.preventDefault()}
                           onDrop={(event) => {
                             event.preventDefault()

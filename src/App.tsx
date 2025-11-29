@@ -199,6 +199,7 @@ const steps: Step[] = [
 ]
 
 function App() {
+  const [showOpening, setShowOpening] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
   const [selectedColors, setSelectedColors] = useState<string[]>([])
   const [breathPhase, setBreathPhase] = useState('Tarik napas 3 detik')
@@ -223,6 +224,9 @@ function App() {
       )
   )
   const [selectedPiece, setSelectedPiece] = useState<string | null>(null)
+  const [draggingPiece, setDraggingPiece] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number } | null>(null)
+  const draggedPieceRef = useRef<HTMLDivElement | null>(null)
   const isTouchDevice = useMemo(() => {
     return 'ontouchstart' in window || navigator.maxTouchPoints > 0
   }, [])
@@ -234,6 +238,7 @@ function App() {
   const bubbleContainerRef = useRef<HTMLDivElement | null>(null)
   const [showScrollIndicator, setShowScrollIndicator] = useState(true)
   const [hasScrolled, setHasScrolled] = useState(false)
+  const [activeTexture3D, setActiveTexture3D] = useState<string | null>(null)
 
   useEffect(() => {
     const phases = [
@@ -326,6 +331,72 @@ function App() {
       behavior: 'smooth'
     })
   }, [stepIndex])
+
+  // Global touch handlers for drag
+  useEffect(() => {
+    if (!draggingPiece || !isTouchDevice) return
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      e.preventDefault()
+      if (!draggingPiece || !dragOffset) return
+      
+      const touch = e.touches[0]
+      
+      if (draggedPieceRef.current) {
+        draggedPieceRef.current.style.position = 'fixed'
+        draggedPieceRef.current.style.left = `${touch.clientX + dragOffset.x}px`
+        draggedPieceRef.current.style.top = `${touch.clientY + dragOffset.y}px`
+        draggedPieceRef.current.style.zIndex = '1000'
+        draggedPieceRef.current.style.pointerEvents = 'none'
+      }
+    }
+
+    const handleGlobalTouchEnd = (e: TouchEvent) => {
+      if (!draggingPiece) return
+      
+      const touch = e.changedTouches[0]
+      const element = document.elementFromPoint(touch.clientX, touch.clientY)
+      
+      const targetElement = element?.closest('[data-target-id]') as HTMLElement
+      const targetId = targetElement?.getAttribute('data-target-id')
+      
+      if (targetId && draggingPiece) {
+        const piece = PUZZLE_PIECES.find((item) => item.id === draggingPiece)
+        if (piece && piece.targetId === targetId) {
+          setPuzzlePlacement((prev) => {
+            const next: Record<string, string | null> = { ...prev }
+            Object.keys(next).forEach((key) => {
+              if (next[key] === draggingPiece) {
+                next[key] = null
+              }
+            })
+            next[targetId] = draggingPiece
+            return next
+          })
+        }
+      }
+      
+      if (draggedPieceRef.current) {
+        draggedPieceRef.current.style.position = ''
+        draggedPieceRef.current.style.left = ''
+        draggedPieceRef.current.style.top = ''
+        draggedPieceRef.current.style.zIndex = ''
+        draggedPieceRef.current.style.pointerEvents = ''
+      }
+      
+      setDraggingPiece(null)
+      setDragOffset(null)
+      setSelectedPiece(null)
+    }
+
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+    document.addEventListener('touchend', handleGlobalTouchEnd, { passive: true })
+
+    return () => {
+      document.removeEventListener('touchmove', handleGlobalTouchMove)
+      document.removeEventListener('touchend', handleGlobalTouchEnd)
+    }
+  }, [draggingPiece, dragOffset, isTouchDevice])
 
   // Handle scroll indicator
   useEffect(() => {
@@ -621,6 +692,22 @@ function App() {
     handlePuzzleDrop(targetId, selectedPiece)
   }
 
+  // Mobile drag handlers
+  const handleTouchStart = (pieceId: string, e: React.TouchEvent) => {
+    if (!isTouchDevice) return
+    
+    const touch = e.touches[0]
+    const element = e.currentTarget as HTMLElement
+    const rect = element.getBoundingClientRect()
+    
+    setDraggingPiece(pieceId)
+    setDragOffset({
+      x: touch.clientX - rect.left - rect.width / 2,
+      y: touch.clientY - rect.top - rect.height / 2
+    })
+    setSelectedPiece(pieceId)
+  }
+
   const handleAudioToggle = (optionId: string) => {
     const option = AUDIO_OPTIONS.find((audio) => audio.id === optionId)
     if (!option) return
@@ -699,10 +786,17 @@ function App() {
   }
 
   const markTextureTouched = (textureId: string) => {
-    setTouchedTextures((prev) => {
-      if (prev.includes(textureId)) return prev
-      return [...prev, textureId]
-    })
+    // Show 3D object
+    setActiveTexture3D(textureId)
+    
+    // Mark as touched after 3D interaction
+    setTimeout(() => {
+      setTouchedTextures((prev) => {
+        if (prev.includes(textureId)) return prev
+        return [...prev, textureId]
+      })
+      setActiveTexture3D(null)
+    }, 2000) // Show 3D object for 2 seconds
   }
 
   const handleSymbolTap = () => {
@@ -857,6 +951,45 @@ function App() {
     lastPoint.current = point
   }
 
+  // Handle opening screen
+  useEffect(() => {
+    if (showOpening) {
+      // Auto close after 3 seconds or on click
+      const timer = setTimeout(() => {
+        setShowOpening(false)
+      }, 3000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [showOpening])
+
+  if (showOpening) {
+    return (
+      <div className="opening-screen" onClick={() => setShowOpening(false)}>
+        <div className="opening-content">
+          <div className="opening-logo-wrapper">
+            <img 
+              src="/Logo mindfulness.jpg" 
+              alt="Hening Steps Logo" 
+              className="opening-logo"
+            />
+          </div>
+          <div className="opening-text">
+            <h1 className="opening-title">Hening Steps</h1>
+            <p className="opening-subtitle">Safe Space Digital</p>
+            <p className="opening-message">
+              Setiap napas adalah kesempatan baru untuk kembali ke diri sendiri.
+            </p>
+          </div>
+          <div className="opening-hint">
+            <p>Ketuk untuk memulai</p>
+            <span className="opening-arrow">↓</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       <header className="hero">
@@ -983,16 +1116,22 @@ function App() {
                     ).map((piece) => (
                       <div
                         key={piece.id}
-                        className={`puzzle-piece ${selectedPiece === piece.id ? 'selected' : ''}`}
+                        ref={draggingPiece === piece.id ? draggedPieceRef : null}
+                        className={`puzzle-piece ${selectedPiece === piece.id ? 'selected' : ''} ${draggingPiece === piece.id ? 'dragging' : ''}`}
                         draggable={!isTouchDevice}
                         onDragStart={(event) => {
                           if (!isTouchDevice) {
                             event.dataTransfer.setData('text/plain', piece.id)
                           }
                         }}
+                        onTouchStart={(e) => {
+                          if (isTouchDevice) {
+                            handleTouchStart(piece.id, e)
+                          }
+                        }}
                         onPointerDown={(e) => {
-                          // For mobile/touch devices
-                          if (e.pointerType === 'touch' || isTouchDevice) {
+                          // For mobile/touch devices - only if not dragging
+                          if ((e.pointerType === 'touch' || isTouchDevice) && !draggingPiece) {
                             e.preventDefault()
                             e.stopPropagation()
                             handlePieceTap(piece.id, e)
@@ -1107,6 +1246,34 @@ function App() {
         </button>
                   ))}
                 </div>
+                {activeTexture3D && (
+                  <div className="texture-3d-overlay" onClick={() => setActiveTexture3D(null)}>
+                    <div className="texture-3d-container">
+                      {activeTexture3D === 'rough' && (
+                        <div className="texture-3d-object stone-3d">
+                          <div className="stone-surface"></div>
+                          <div className="stone-surface"></div>
+                          <div className="stone-surface"></div>
+                          <p>Rasakan tekstur batu yang kasar</p>
+                        </div>
+                      )}
+                      {activeTexture3D === 'smooth' && (
+                        <div className="texture-3d-object fabric-3d">
+                          <div className="fabric-layer"></div>
+                          <div className="fabric-layer"></div>
+                          <p>Rasakan tekstil yang halus</p>
+                        </div>
+                      )}
+                      {activeTexture3D === 'soft' && (
+                        <div className="texture-3d-object marshmallow-3d">
+                          <div className="marshmallow-body"></div>
+                          <div className="marshmallow-shine"></div>
+                          <p>Rasakan marshmallow yang lembut</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="grounding-block">
@@ -1151,9 +1318,11 @@ function App() {
                   className={`symbol-pad ${symbolTapped ? 'active' : ''}`}
                   onClick={handleSymbolTap}
                 >
-                  <span role="img" aria-label="Daun tenang">
-                    🍃
-                  </span>
+                  <img 
+                    src="/image/pohon.jpeg" 
+                    alt="Pohon tenang" 
+                    className="symbol-image"
+                  />
                   <p>{symbolTapped ? 'Simbol tersentuh. Tarik napas lega.' : 'Sentuh sekali.'}</p>
                 </button>
               </div>

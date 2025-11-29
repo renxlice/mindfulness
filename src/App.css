@@ -53,7 +53,6 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: logoPulse 3s ease-in-out infinite;
   background: white;
-  padding: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -73,7 +72,8 @@
 .opening-logo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
 }
 
 .opening-text {
@@ -832,6 +832,29 @@
 /* Stone 3D */
 .stone-3d {
   animation: stoneFloat 3s ease-in-out infinite;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stone-3d.interactive-stone {
+  transition: transform 0.3s ease;
+}
+
+.stone-3d.interactive-stone:active {
+  animation: stoneClick 0.2s ease;
+}
+
+@keyframes stoneClick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95) rotateY(5deg);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes stoneFloat {
@@ -855,6 +878,15 @@
   position: relative;
   transform-style: preserve-3d;
   animation: stoneRotate 4s ease-in-out infinite;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.interactive-stone .stone-surface:active {
+  box-shadow: 
+    inset -8px -8px 15px rgba(0, 0, 0, 0.4),
+    inset 8px 8px 15px rgba(255, 255, 255, 0.15),
+    0 15px 30px rgba(0, 0, 0, 0.5);
+  transform: scale(0.98);
 }
 
 .stone-surface:nth-child(1) {
@@ -885,9 +917,184 @@
 /* Fabric 3D */
 .fabric-3d {
   animation: fabricWave 3s ease-in-out infinite;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fabric-3d.interactive-fabric {
+  transition: transform 0.3s ease;
+}
+
+.fabric-3d.interactive-fabric:active {
+  animation: fabricClick 0.2s ease;
+}
+
+@keyframes fabricClick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 @keyframes fabricWave {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(5deg);
+  }
+}
+
+/* Fabric Cloth - More realistic cloth appearance */
+.fabric-cloth {
+  width: 220px;
+  height: 220px;
+  position: relative;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.fabric-fold {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #f8f8f8 25%,
+    #f0f0f0 50%,
+    #e8e8e8 75%,
+    #e0e0e0 100%
+  );
+  border-radius: 8px;
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.fabric-fold-1 {
+  transform: rotateY(-15deg) rotateX(5deg) translateZ(0);
+  opacity: 1;
+}
+
+.fabric-fold-2 {
+  transform: rotateY(10deg) rotateX(-8deg) translateZ(15px);
+  opacity: 0.85;
+  width: 90%;
+  height: 90%;
+  left: 5%;
+  top: 5%;
+}
+
+.fabric-fold-3 {
+  transform: rotateY(-5deg) rotateX(12deg) translateZ(30px);
+  opacity: 0.7;
+  width: 80%;
+  height: 80%;
+  left: 10%;
+  top: 10%;
+}
+
+.fabric-texture {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.interactive-fabric:active .fabric-fold {
+  box-shadow: 
+    0 10px 25px rgba(122, 165, 147, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(122, 165, 147, 0.1);
+  transform: scale(0.98);
+}
+
+.interactive-fabric:active .fabric-fold-1 {
+  transform: rotateY(-20deg) rotateX(8deg) translateZ(0);
+}
+
+.interactive-fabric:active .fabric-fold-2 {
+  transform: rotateY(15deg) rotateX(-10deg) translateZ(15px);
+}
+
+.interactive-fabric:active .fabric-fold-3 {
+  transform: rotateY(-10deg) rotateX(15deg) translateZ(30px);
+}
+
+/* Soft Boxes 3D */
+.soft-boxes-3d {
+  animation: softBoxesFloat 2s ease-in-out infinite;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.soft-boxes-3d.interactive-soft-boxes {
+  transition: transform 0.3s ease;
+}
+
+.soft-boxes-3d.interactive-soft-boxes:active {
+  animation: softBoxesClick 0.2s ease;
+}
+
+@keyframes softBoxesClick {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes softBoxesFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.02);
+  }
+}
+
+/* Soft Boxes Group - 3 white boxes with rounded corners */
+.soft-boxes-group {
+  position: relative;
+  width: 220px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  animation: softBoxesBounce 2.5s ease-in-out infinite;
+}
+
+@keyframes softBoxesBounce {
   0%, 100% {
     transform: translateY(0);
   }
@@ -896,104 +1103,77 @@
   }
 }
 
-.fabric-layer {
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, #f5f5f5, #e8e8e8, #ffffff);
-  border-radius: 50%;
+/* Soft Box - White boxes with rounded corners */
+.soft-box {
+  background: linear-gradient(
+    135deg,
+    #ffffff 0%,
+    #fafafa 50%,
+    #ffffff 100%
+  );
+  border-radius: 16px;
   box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.2),
-    inset 0 -10px 20px rgba(0, 0, 0, 0.1);
+    0 15px 35px rgba(0, 0, 0, 0.12),
+    inset 0 2px 4px rgba(255, 255, 255, 0.9),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
   position: relative;
-  animation: fabricShimmer 2s ease-in-out infinite;
 }
 
-.fabric-layer:nth-child(1) {
-  transform: translateZ(0) rotate(0deg);
+.soft-box-1 {
+  width: 80px;
+  height: 120px;
+  transform: rotate(-5deg);
 }
 
-.fabric-layer:nth-child(2) {
-  transform: translateZ(30px) rotate(45deg) translateY(-20px);
-  width: 160px;
-  height: 160px;
-  opacity: 0.8;
+.soft-box-2 {
+  width: 80px;
+  height: 140px;
+  transform: rotate(2deg);
 }
 
-@keyframes fabricShimmer {
-  0%, 100% {
-    box-shadow: 
-      0 20px 40px rgba(0, 0, 0, 0.2),
-      inset 0 -10px 20px rgba(0, 0, 0, 0.1);
-  }
-  50% {
-    box-shadow: 
-      0 25px 50px rgba(122, 165, 147, 0.3),
-      inset 0 -10px 20px rgba(122, 165, 147, 0.15);
-  }
+.soft-box-3 {
+  width: 80px;
+  height: 110px;
+  transform: rotate(-3deg);
 }
 
-/* Marshmallow 3D */
-.marshmallow-3d {
-  animation: marshmallowBounce 2s ease-in-out infinite;
-}
-
-@keyframes marshmallowBounce {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-25px) scale(1.05);
-  }
-}
-
-.marshmallow-body {
-  width: 150px;
-  height: 150px;
-  background: linear-gradient(135deg, #ffffff, #fff5e6, #ffe6cc);
-  border-radius: 50%;
+.interactive-soft-boxes:active .soft-box {
   box-shadow: 
-    0 25px 50px rgba(0, 0, 0, 0.2),
-    inset -15px -15px 30px rgba(255, 200, 150, 0.3),
-    inset 15px 15px 30px rgba(255, 255, 255, 0.8);
-  position: relative;
-  animation: marshmallowSquish 2.5s ease-in-out infinite;
+    0 10px 25px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.08);
+  transform: scale(0.95);
 }
 
-@keyframes marshmallowSquish {
-  0%, 100% {
-    transform: scaleY(1) scaleX(1);
-  }
-  25% {
-    transform: scaleY(1.1) scaleX(0.95);
-  }
-  50% {
-    transform: scaleY(0.95) scaleX(1.05);
-  }
-  75% {
-    transform: scaleY(1.05) scaleX(0.98);
-  }
+.interactive-soft-boxes:active .soft-box-1 {
+  transform: rotate(-8deg) scale(0.95);
 }
 
-.marshmallow-shine {
+.interactive-soft-boxes:active .soft-box-2 {
+  transform: rotate(5deg) scale(0.95);
+}
+
+.interactive-soft-boxes:active .soft-box-3 {
+  transform: rotate(-6deg) scale(0.95);
+}
+
+/* Soft boxes shine effect */
+.soft-box::before {
+  content: '';
   position: absolute;
-  top: 20%;
-  left: 30%;
-  width: 40px;
-  height: 40px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent);
-  border-radius: 50%;
-  animation: shineMove 3s ease-in-out infinite;
-}
-
-@keyframes shineMove {
-  0%, 100% {
-    transform: translate(0, 0);
-    opacity: 0.8;
-  }
-  50% {
-    transform: translate(20px, 20px);
-    opacity: 1;
-  }
+  top: 10%;
+  left: 10%;
+  width: 60%;
+  height: 30%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  border-radius: 8px;
+  pointer-events: none;
 }
 
 .symbol-pad {
@@ -1015,12 +1195,23 @@
   font-size: 2.8rem;
 }
 
-.symbol-image {
-  width: 120px;
-  height: 120px;
-  object-fit: cover;
+.symbol-image-wrapper {
+  width: 140px;
+  height: 140px;
   border-radius: 16px;
+  overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.symbol-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
 .symbol-pad.active {
@@ -1028,9 +1219,13 @@
   box-shadow: 0 12px 30px rgba(66, 84, 72, 0.25);
 }
 
-.symbol-pad.active .symbol-image {
+.symbol-pad.active .symbol-image-wrapper {
   transform: scale(1.05);
   box-shadow: 0 12px 30px rgba(66, 84, 72, 0.3);
+}
+
+.symbol-pad.active .symbol-image {
+  transform: scale(1.02);
 }
 
 .secondary {
@@ -1491,6 +1686,11 @@
     font-size: 1rem;
   }
 
+  .symbol-image-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
   .stone-surface {
     width: 100px;
     height: 100px;
@@ -1506,19 +1706,30 @@
     height: 60px;
   }
 
-  .fabric-layer {
-    width: 150px;
-    height: 150px;
+  .fabric-cloth {
+    width: 180px;
+    height: 180px;
   }
 
-  .fabric-layer:nth-child(2) {
-    width: 120px;
-    height: 120px;
+  .soft-boxes-group {
+    width: 180px;
+    height: 130px;
+    gap: 15px;
   }
 
-  .marshmallow-body {
-    width: 120px;
-    height: 120px;
+  .soft-box-1 {
+    width: 60px;
+    height: 95px;
+  }
+
+  .soft-box-2 {
+    width: 60px;
+    height: 110px;
+  }
+
+  .soft-box-3 {
+    width: 60px;
+    height: 90px;
   }
 
   .symbol-image {

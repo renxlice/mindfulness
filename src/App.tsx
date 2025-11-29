@@ -166,7 +166,7 @@ const steps: Step[] = [
     label: 'Step 2',
     subtitle: 'Grounding',
     body:
-      'Permainan sensorik 5-4-3-5-1: memindahkan objek, memilih suara, menyentuh tekstur, meracik warna, dan mengetuk simbol tenang untuk menurunkan intensitas emosi.',
+      'Permainan sensorik 5-4-3-2-1: memindahkan objek, memilih suara, menyentuh tekstur, meracik warna, dan mengetuk simbol tenang untuk menurunkan intensitas emosi.',
   },
   {
     id: 'breath',
@@ -239,6 +239,17 @@ function App() {
   const [showScrollIndicator, setShowScrollIndicator] = useState(true)
   const [hasScrolled, setHasScrolled] = useState(false)
   const [activeTexture3D, setActiveTexture3D] = useState<string | null>(null)
+  const [stoneInteractionCount, setStoneInteractionCount] = useState(0)
+  const [stoneRotation, setStoneRotation] = useState(0)
+  const [fabricInteractionCount, setFabricInteractionCount] = useState(0)
+  const [fabricWave, setFabricWave] = useState(0)
+  const [marshmallowInteractionCount, setMarshmallowInteractionCount] = useState(0)
+  const [marshmallowSquish, setMarshmallowSquish] = useState(0)
+  
+  // Audio refs for texture interactions
+  const textureAudioRefs = useRef<Record<string, HTMLAudioElement>>({})
+  // Audio ref for symbol tap (forest birds)
+  const symbolAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const phases = [
@@ -322,6 +333,17 @@ function App() {
       }
     }
   }, [soundOn, stepIndex])
+
+  // Stop symbol audio when leaving grounding step
+  useEffect(() => {
+    const currentStep = steps[stepIndex]
+    const isGroundingStep = currentStep.id === 'grounding'
+    
+    if (!isGroundingStep && symbolAudioRef.current) {
+      symbolAudioRef.current.pause()
+      symbolAudioRef.current.currentTime = 0
+    }
+  }, [stepIndex])
 
   // Scroll to top when step changes
   useEffect(() => {
@@ -609,7 +631,7 @@ function App() {
       if (prev.includes(hex)) {
         return prev.filter((color) => color !== hex)
       }
-      if (prev.length >= 5) {
+      if (prev.length >= 2) {
         return prev
       }
       return [...prev, hex]
@@ -733,7 +755,22 @@ function App() {
         }
         return prev.filter((id) => id !== optionId)
       } else {
-        // Audio is not selected yet, select it and play audio ONCE
+        // Audio is not selected yet, stop ALL other audios first (only one plays at a time)
+        Object.keys(audioSamplesRef.current).forEach((audioId) => {
+          const audio = audioSamplesRef.current[audioId]
+          if (audio && audioId !== optionId) {
+            audio.pause()
+            audio.currentTime = 0
+            audio.src = ''
+            audio.load()
+            delete audioSamplesRef.current[audioId]
+          }
+        })
+        
+        // Add to selected audios list (allow multiple selections: 2, 3, or 4)
+        // But limit to 4 selections
+        const newSelectedAudios = prev.length < 4 ? [...prev, optionId] : prev
+        
         // First, make sure to stop any previous instance if exists
         if (audioSamplesRef.current[optionId]) {
           audioSamplesRef.current[optionId].pause()
@@ -780,8 +817,35 @@ function App() {
             })
         }
         
-        return [...prev, optionId]
+        return newSelectedAudios
       }
+    })
+  }
+
+  const playTextureAudio = (textureId: string) => {
+    const audioMap: Record<string, string> = {
+      'rough': '/audio/077381_scraping-stone-83768.mp3',
+      'smooth': '/audio/pat-cloth-6727.mp3',
+      'soft': '/audio/movement-101711.mp3',
+    }
+    
+    const audioUrl = audioMap[textureId]
+    if (!audioUrl) return
+    
+    // Stop previous audio if playing
+    if (textureAudioRefs.current[textureId]) {
+      textureAudioRefs.current[textureId].pause()
+      textureAudioRefs.current[textureId].currentTime = 0
+    }
+    
+    // Create and play new audio
+    const audio = new Audio(audioUrl)
+    audio.volume = 0.6
+    audio.preload = 'auto'
+    textureAudioRefs.current[textureId] = audio
+    
+    audio.play().catch((err) => {
+      console.error(`Texture audio ${textureId} play failed:`, err)
     })
   }
 
@@ -789,18 +853,103 @@ function App() {
     // Show 3D object
     setActiveTexture3D(textureId)
     
-    // Mark as touched after 3D interaction
-    setTimeout(() => {
+    // Reset all interactions
+    setStoneInteractionCount(0)
+    setStoneRotation(0)
+    setFabricInteractionCount(0)
+    setFabricWave(0)
+    setMarshmallowInteractionCount(0)
+    setMarshmallowSquish(0)
+    
+    // Play audio for the texture
+    playTextureAudio(textureId)
+    
+    // No auto-close timer - user must click 10 times
+  }
+
+  const checkTextureComplete = (textureId: string, interactionCount: number) => {
+    if (interactionCount >= 10) {
+      // Mark as touched after 10 interactions
       setTouchedTextures((prev) => {
         if (prev.includes(textureId)) return prev
         return [...prev, textureId]
       })
       setActiveTexture3D(null)
-    }, 2000) // Show 3D object for 2 seconds
+      setStoneInteractionCount(0)
+      setStoneRotation(0)
+      setFabricInteractionCount(0)
+      setFabricWave(0)
+      setMarshmallowInteractionCount(0)
+      setMarshmallowSquish(0)
+      
+      // Stop audio
+      if (textureAudioRefs.current[textureId]) {
+        textureAudioRefs.current[textureId].pause()
+        textureAudioRefs.current[textureId].currentTime = 0
+      }
+    }
+  }
+
+  const handleStoneClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation() // Prevent closing overlay
+    setStoneInteractionCount((prev) => {
+      const newCount = prev + 1
+      checkTextureComplete('rough', newCount)
+      return newCount
+    })
+    setStoneRotation((prev) => prev + 30 + Math.random() * 20)
+    // Play audio on click
+    playTextureAudio('rough')
+  }
+
+  const handleFabricClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation() // Prevent closing overlay
+    setFabricInteractionCount((prev) => {
+      const newCount = prev + 1
+      checkTextureComplete('smooth', newCount)
+      return newCount
+    })
+    setFabricWave((prev) => prev + 1)
+    // Play audio on click
+    playTextureAudio('smooth')
+  }
+
+  const handleMarshmallowClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation() // Prevent closing overlay
+    setMarshmallowInteractionCount((prev) => {
+      const newCount = prev + 1
+      checkTextureComplete('soft', newCount)
+      return newCount
+    })
+    setMarshmallowSquish((prev) => prev + 0.1)
+    // Play audio on click
+    playTextureAudio('soft')
   }
 
   const handleSymbolTap = () => {
     setSymbolTapped(true)
+    
+    // Stop ALL audio first (wind, grounding, texture)
+    stopAllAudio()
+    
+    // Also turn off wind audio toggle state
+    setSoundOn(false)
+    
+    // Play forest birds audio
+    if (!symbolAudioRef.current) {
+      symbolAudioRef.current = new Audio('/audio/forestbirds-2-367580.mp3')
+      symbolAudioRef.current.loop = true
+      symbolAudioRef.current.volume = 0.5
+      symbolAudioRef.current.preload = 'auto'
+      
+      symbolAudioRef.current.addEventListener('error', (e) => {
+        console.error('Symbol audio error:', e)
+      })
+    }
+    
+    symbolAudioRef.current.play().catch((err) => {
+      console.error('Symbol audio play failed:', err)
+    })
   }
 
   const popBubble = (bubbleId: number) => {
@@ -827,9 +976,9 @@ function App() {
     }
     if (current.id === 'grounding') {
       const puzzleComplete = Object.values(puzzlePlacement).every(Boolean)
-      const audioComplete = selectedAudios.length === AUDIO_OPTIONS.length
+      const audioComplete = selectedAudios.length >= 1
       const textureComplete = touchedTextures.length === TEXTURE_CARDS.length
-      const colorComplete = selectedColors.length === 5
+      const colorComplete = selectedColors.length === 2
       return puzzleComplete && audioComplete && textureComplete && colorComplete && symbolTapped
     }
     if (current.id === 'reflect') {
@@ -850,6 +999,51 @@ function App() {
         delete audioSamplesRef.current[audioId]
       }
     })
+    
+    // Stop symbol audio
+    if (symbolAudioRef.current) {
+      symbolAudioRef.current.pause()
+      symbolAudioRef.current.currentTime = 0
+    }
+  }
+
+  // Function to stop ALL audio (wind, grounding, texture, symbol)
+  const stopAllAudio = () => {
+    // Stop wind audio
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+    
+    // Stop all grounding audio samples
+    Object.keys(audioSamplesRef.current).forEach((audioId) => {
+      const audio = audioSamplesRef.current[audioId]
+      if (audio) {
+        audio.pause()
+        audio.currentTime = 0
+        audio.src = ''
+        audio.load()
+        delete audioSamplesRef.current[audioId]
+      }
+    })
+    
+    // Stop all texture audio
+    Object.keys(textureAudioRefs.current).forEach((textureId) => {
+      const audio = textureAudioRefs.current[textureId]
+      if (audio) {
+        audio.pause()
+        audio.currentTime = 0
+        audio.src = ''
+        audio.load()
+        delete textureAudioRefs.current[textureId]
+      }
+    })
+    
+    // Stop symbol audio (will be restarted if needed)
+    if (symbolAudioRef.current) {
+      symbolAudioRef.current.pause()
+      symbolAudioRef.current.currentTime = 0
+    }
   }
 
   const goNext = () => {
@@ -894,6 +1088,10 @@ function App() {
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.currentTime = 0
+    }
+    if (symbolAudioRef.current) {
+      symbolAudioRef.current.pause()
+      symbolAudioRef.current.currentTime = 0
     }
     
     setStepIndex(0)
@@ -1085,7 +1283,7 @@ function App() {
           <section className="card grounding-card">
             <header className="grounding-head">
               <div>
-                <h2>Grounding 5 • 4 • 3 • 5 • 1</h2>
+                <h2>Grounding 5 • 4 • 3 • 2 • 1</h2>
                 <p>
                   Sentuh lima indera secara bertahap: gerakkan objek, dengarkan suara,
                   rasakan tekstur, pilih warna nyaman, lalu ketuk simbol penutup.
@@ -1094,7 +1292,7 @@ function App() {
               <div className="selection-indicator">
                 {Object.values(puzzlePlacement).filter(Boolean).length}/5 objek ·{' '}
                 {selectedAudios.length}/4 audio · {touchedTextures.length}/3 tekstur ·{' '}
-                {selectedColors.length}/5 warna · {symbolTapped ? 1 : 0}/1 simbol
+                {selectedColors.length}/2 warna · {symbolTapped ? 1 : 0}/1 simbol
 
               </div>
             </header>
@@ -1106,7 +1304,7 @@ function App() {
                   <p>
                     {selectedPiece 
                       ? 'Pilih slot yang tepat untuk menempatkan objek yang dipilih.'
-                      : 'Ketuk objek untuk memilih, lalu ketuk slot yang tepat. Atau seret gambar ke slot yang sesuai.'}
+                      : 'Seret gambar ke slot yang sesuai.'}
                   </p>
                 </div>
                 <div className="puzzle-area">
@@ -1247,28 +1445,85 @@ function App() {
                   ))}
                 </div>
                 {activeTexture3D && (
-                  <div className="texture-3d-overlay" onClick={() => setActiveTexture3D(null)}>
-                    <div className="texture-3d-container">
+                  <div 
+                    className="texture-3d-overlay" 
+                    onClick={(e) => {
+                      // Only close if clicking on the overlay background, not on the object
+                      if (e.target === e.currentTarget) {
+                        setActiveTexture3D(null)
+                        setStoneInteractionCount(0)
+                        setStoneRotation(0)
+                        setFabricInteractionCount(0)
+                        setFabricWave(0)
+                        setMarshmallowInteractionCount(0)
+                        setMarshmallowSquish(0)
+                        
+                        // Stop all texture audio
+                        Object.values(textureAudioRefs.current).forEach((audio) => {
+                          audio.pause()
+                          audio.currentTime = 0
+                        })
+                      }
+                    }}
+                  >
+                    <div 
+                      className="texture-3d-container"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {activeTexture3D === 'rough' && (
-                        <div className="texture-3d-object stone-3d">
+                        <div 
+                          className="texture-3d-object stone-3d interactive-stone"
+                          onClick={handleStoneClick}
+                          onTouchStart={handleStoneClick}
+                          style={{ transform: `rotateY(${stoneRotation}deg)` }}
+                        >
                           <div className="stone-surface"></div>
                           <div className="stone-surface"></div>
                           <div className="stone-surface"></div>
-                          <p>Rasakan tekstur batu yang kasar</p>
+                          <p>
+                            {stoneInteractionCount > 0 
+                              ? `Klik ${stoneInteractionCount}/10 - Rasakan tekstur batu yang kasar` 
+                              : 'Klik batu untuk merasakan teksturnya (10x)'}
+                          </p>
                         </div>
                       )}
                       {activeTexture3D === 'smooth' && (
-                        <div className="texture-3d-object fabric-3d">
-                          <div className="fabric-layer"></div>
-                          <div className="fabric-layer"></div>
-                          <p>Rasakan tekstil yang halus</p>
+                        <div 
+                          className="texture-3d-object fabric-3d interactive-fabric"
+                          onClick={handleFabricClick}
+                          onTouchStart={handleFabricClick}
+                          style={{ transform: `rotate(${fabricWave * 5}deg) translateY(${fabricWave * -3}px)` }}
+                        >
+                          <div className="fabric-cloth">
+                            <div className="fabric-fold fabric-fold-1"></div>
+                            <div className="fabric-fold fabric-fold-2"></div>
+                            <div className="fabric-fold fabric-fold-3"></div>
+                            <div className="fabric-texture"></div>
+                          </div>
+                          <p>
+                            {fabricInteractionCount > 0 
+                              ? `Klik ${fabricInteractionCount}/10 - Rasakan tekstil yang halus` 
+                              : 'Klik kain untuk merasakan kehalusannya (10x)'}
+                          </p>
                         </div>
                       )}
                       {activeTexture3D === 'soft' && (
-                        <div className="texture-3d-object marshmallow-3d">
-                          <div className="marshmallow-body"></div>
-                          <div className="marshmallow-shine"></div>
-                          <p>Rasakan marshmallow yang lembut</p>
+                        <div 
+                          className="texture-3d-object soft-boxes-3d interactive-soft-boxes"
+                          onClick={handleMarshmallowClick}
+                          onTouchStart={handleMarshmallowClick}
+                          style={{ transform: `scale(${1 + marshmallowSquish * 0.05})` }}
+                        >
+                          <div className="soft-boxes-group">
+                            <div className="soft-box soft-box-1"></div>
+                            <div className="soft-box soft-box-2"></div>
+                            <div className="soft-box soft-box-3"></div>
+                          </div>
+                          <p>
+                            {marshmallowInteractionCount > 0 
+                              ? `Klik ${marshmallowInteractionCount}/10 - Rasakan kelembutan` 
+                              : 'Klik kotak untuk merasakan kelembutannya (10x)'}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -1278,9 +1533,9 @@ function App() {
 
               <div className="grounding-block">
                 <div className="block-title">
-                  <h3>4. Rangkai 5 Warna</h3>
+                  <h3>4. Rangkai 2 Warna</h3>
                   <p>
-                    Pilih lima warna pastel yang terasa paling nyaman. Bayangkan mereka
+                    Pilih dua warna pastel yang terasa paling nyaman. Bayangkan mereka
                     berpadu harmonis.
         </p>
       </div>
@@ -1300,9 +1555,9 @@ function App() {
                   ))}
                 </div>
                 <p className="selection-indicator secondary">
-                  {selectedColors.length}/5 warna dipilih
+                  {selectedColors.length}/2 warna dipilih
                 </p>
-                {selectedColors.length === 5 && (
+                {selectedColors.length === 2 && (
                   <p className="affirmation-note">
                     Terima kasih. Kombinasi warnamu menghadirkan rasa aman.
                   </p>
@@ -1318,11 +1573,13 @@ function App() {
                   className={`symbol-pad ${symbolTapped ? 'active' : ''}`}
                   onClick={handleSymbolTap}
                 >
-                  <img 
-                    src="/image/pohon.jpeg" 
-                    alt="Pohon tenang" 
-                    className="symbol-image"
-                  />
+                  <div className="symbol-image-wrapper">
+                    <img 
+                      src="/image/pohon.jpeg" 
+                      alt="Pohon tenang" 
+                      className="symbol-image"
+                    />
+                  </div>
                   <p>{symbolTapped ? 'Simbol tersentuh. Tarik napas lega.' : 'Sentuh sekali.'}</p>
                 </button>
               </div>
@@ -1346,9 +1603,9 @@ function App() {
                 </span>
               </div>
               <div>
-                <strong>5 warna</strong>
+                <strong>2 warna</strong>
                 <span>
-                  {selectedColors.length}/5
+                  {selectedColors.length}/2
                 </span>
               </div>
               <div>

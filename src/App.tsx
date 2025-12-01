@@ -1575,7 +1575,7 @@ function App() {
                 >
                   <div className="symbol-image-wrapper">
                     <img 
-                      src="/image/pohon.jpeg" 
+                      src="/image/tree.jpeg" 
                       alt="Pohon tenang" 
                       className="symbol-image"
                     />

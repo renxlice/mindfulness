@@ -24,16 +24,9 @@ const COLOR_OPTIONS = [
 ] as const
 
 const REFLECTION_PROMPTS = [
+  'Apa yang sedang kamu rasakan saat ini',
   'Bagaimana keadaanmu saat ini?',
-  'Apa perasaan yang paling dominan detik ini?',
-  'Apa yang sedang kamu bawa hari ini?',
-  'Bagian mana dari tubuhmu yang terasa tegang?',
-  'Apa pikiran yang berulang sejak pagi?',
-  'Jika suasana hatimu adalah cuaca, cuaca apa itu?',
-  'Apa hal kecil yang kamu butuhkan sekarang?',
-  'Apa yang membuat hari ini berat?',
-  'Apa yang ingin kamu lepaskan malam ini?',
-  'Jika emosimu bisa berbicara, apa yang ia katakan?',
+  'Apa pikiranmu yang sering muncul sejak pagi?',
 ]
 
 const AUDIO_OPTIONS = [
